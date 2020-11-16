@@ -1,3 +1,5 @@
 numpy
 matplotlib
 pytorch
+opencv-python
+imutils

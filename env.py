@@ -6,10 +6,10 @@ class Env:
         self.camera = camera
         
         self.time = time.time()
-        self.corners = camera.get_corners()
-        self.striker1_pos = camera.get_striker1_pos(self.corners)
-        self.striker2_pos = camera.get_striker2_pos(self.corners)
-        self.puck_pos = camera.get_puck_pos(self.corners)
+        s = camera.get_state()
+        self.striker1_pos = s[1]
+        self.striker2_pos = s[2]
+        self.puck_pos = s[0]
         
     def get_state(self):
         """

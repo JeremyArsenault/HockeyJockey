@@ -3,9 +3,9 @@
 
 A personal project with the goal of achieving human level Air Hockey proficency with reinforcement learning.
 
-![perspective transform](.images/sample_perspective_transform.PNG)
+<img src=".images/sample_perspective_transform.PNG"/>
 
-![simulation](.images/sample_simulation.gif)
+<kbd><img src=".images/sample_simulation.gif"/></kbd>
 
 ********
 ### Files:

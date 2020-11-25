@@ -7,6 +7,8 @@ from simulation_env import AirHockey
 from robots import DiscreteActionBotSim
 import model
 
+#from array2gif import write_gif
+
 MODEL_PATH = 'models/actor_critic.pkl'
 
 if __name__=='__main__':
@@ -23,6 +25,8 @@ if __name__=='__main__':
         state1, reward, state2, _, done, info = env.step(a1, a2)
         frames.append(env.render())
     print(reward)
+    
+    #write_gif(np.array(frames)[:50], '.images/sample_simulation.gif', fps=15)
     
     for frame in frames:
         cv2.imshow('frame', cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))

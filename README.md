@@ -5,6 +5,8 @@ A personal project with the goal of achieving human level Air Hockey proficency 
 
 ![perspective transform](.images/sample_perspective_transform.PNG)
 
+![simulation](.images/sample_simulation.gif)
+
 ********
 ### Files:
 

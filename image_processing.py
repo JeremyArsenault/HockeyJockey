@@ -13,9 +13,9 @@ class Camera:
         self.rescaled_dim = (150, 270)
         
         # IMPORTANT COLOR CODES:
-        self.color_green = np.array([51,255,51])
-        self.color_violet = np.array([255,51,255])
-        self.color_orange = np.array([51,153,255])
+        self.color_green = np.array([119,134,98]) 
+        self.color_pink = np.array([140,40,150])
+        self.color_orange = np.array([68,87,163])
         
         # connect to camera
         self.cam = cv2.VideoCapture(device)
@@ -25,14 +25,15 @@ class Camera:
         # set corners
         self.set_corners()
         
-    def color_mask(self, img, color, thresh=10):
+    def color_mask(self, img, color, thresh=10, blur=3):
         """
         Mask image according to color
         :return: mask (0:other colors, 1:selected color)
         """
         dist = np.linalg.norm(img-color, axis=2)
-        mask = dist <= thresh
-        return np.float32(mask)
+        mask = dist <= (np.min(dist) + thresh)
+        smooth_mask = cv2.blur(np.uint8(mask), (blur,blur))
+        return np.float32(smooth_mask)
     
     def perspective_shift(self, img):
         """
@@ -88,7 +89,7 @@ class Camera:
         Get the corners of the table for perspective shifts
         """
         _, frame = self.cam.read()
-        corner_mask = self.color_mask(frame, self.color_violet)
+        corner_mask = self.color_mask(frame, self.color_pink)
         pts = self.find_centroids(corner_mask, 4)
         
         # put pts in correct order

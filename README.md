@@ -3,7 +3,11 @@
 
 A personal project with the goal of achieving human level Air Hockey proficency with reinforcement learning.
 
+*visualization of steps taken in image_processing.py*
+
 <img src=".images/sample_perspective_transform.PNG"/>
+
+*sample render from test.py + simulation_env.py*
 
 <kbd><img src=".images/sample_simulation.gif"/></kbd>
 

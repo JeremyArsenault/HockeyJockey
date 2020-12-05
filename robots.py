@@ -1,5 +1,5 @@
 import numpy as np
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import time
 
 class DiscreteActionBotSim:
@@ -7,33 +7,23 @@ class DiscreteActionBotSim:
     Model of robot dynamics in discrete action space
     """
     def __init__(self):
-        self.acc = np.array([0.07, 0.05])
-        self.drag = np.array([0.8, 0.8])
-        self.ylim = (-0.68, -0.25)
-        self.xlim = (-0.32, 0.32)
+        self.yvel = (-0.5, 0, 0.5)
+        self.xvel = (0.7, 0, -0.7)
+        self.std = 0.1
         
     def sample(self):
         """
         sample from action space
         """
-        # return np.random.randint(0,3, size=(2,)) # 3 actions
-        return np.random.randint(0,2, size=(2,)) # 2 actions
+        return np.random.randint(0,3, size=(2,)) # 3 actions
     
     def execute(self, action, v0, p):
         """
         return striker velocity after action
         """
-        # v = self.drag * (v0 + (action-1)*self.acc)  # 3 actions
-        v = self.drag * (v0 + (2*action-1)*self.acc) # 2 actions
-        if p[1]>self.ylim[1] and v[1]>0:
-            v[1] = 0
-        elif p[1]<self.ylim[0] and v[1]<0:
-            v[1] = 0
-        if p[0]>self.xlim[1] and v[0]>0:
-            v[0] = 0
-        elif p[0]<self.xlim[0] and v[0]<0:
-            v[0] = 0
-        return v
+        vx = np.random.normal(self.xvel[action[0]], self.std)
+        vy = np.random.normal(self.yvel[action[1]], self.std)
+        return np.array([vx,vy])
     
 class DiscreteActionBot:
     """

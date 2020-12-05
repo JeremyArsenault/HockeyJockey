@@ -1,4 +1,3 @@
-from test import test
 from model import ActorCritic
 import torch
 import torch.optim as optim
@@ -19,7 +18,7 @@ def train_single_player_return():
     
     env = SinglePlayerReturn(DiscreteActionBotSim())
     
-    policy = ActorCritic(action_dim=2)
+    policy = ActorCritic()
     
     optimizer = optim.Adam(policy.parameters(), lr=lr, betas=betas)
     
@@ -73,16 +72,16 @@ def train():
     episodes_per_update = 5
     render = False
     gamma = 0.99
-    lr = 0.002
+    lr = 0.0015
     betas = (0.9, 0.999)
     convergence_thresh = 0.1
     
     env = AirHockey(DiscreteActionBotSim())
     
-    #policy = ActorCritic(action_dim=2)
-    #old_policy = ActorCritic(action_dim=2)
-    policy = torch.load('models/actor_critic.pkl')
-    old_policy = torch.load('models/actor_critic.pkl')
+    policy = ActorCritic()
+    old_policy = ActorCritic()
+    #policy = torch.load('models/actor_critic.pkl')
+    #old_policy = torch.load('models/actor_critic.pkl')
     old_policy.eval()
     
     optimizer = optim.Adam(policy.parameters(), lr=lr, betas=betas)
@@ -93,19 +92,19 @@ def train():
     while i_episode<max_episodes:
         state, s = env.reset()
         done = False
-        #rew = 0
+        rew = 0
         while not done:
             action = policy(state)
             state, reward, s, _, done, draw = env.step(action, old_policy(s))
             policy.temp_rewards.append(reward)
-            #rew += reward   
+            rew += reward   
             
-        if draw:
+        if draw and np.random.rand()>0.5:
             policy.clearTempMemory()
             continue
             
         i_episode += 1
-        r.append(reward)
+        r.append(rew)
         
         if i_episode%episodes_per_update:
             policy.updateMemory(gamma)
@@ -142,4 +141,5 @@ def train():
     torch.save(policy, path)
                 
 if __name__ == '__main__':
+    #train_single_player_return()
     train()

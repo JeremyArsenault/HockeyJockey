@@ -26,32 +26,32 @@ class HockeyPhysics:
                 'velocity':np.array([0,0]),
             },
             'striker1' : {
-                'position':np.array([0,-1.4]),
+                'position':np.array([0,-0.8]),
                 'velocity':np.array([0,0]),
             },
             'striker2' : {
-                'position':np.array([0,0.6]),
-                'velocity':np.array([-.1,-.1]),
+                'position':np.array([0,0.8]),
+                'velocity':np.array([0,0]),
             },
         }
         
         # useful world constants
         self.consts = {
-            'table_width' : 0.75,
-            'table_length' : 1.5,
+            'table_width' : 1,
+            'table_length' : 2,
             'table_corner_radius' : 0.01,
-            'table_goal_width' : 0.3,
+            'table_goal_width' : 0.267,
             'table_bounce' : 0.8,
             
-            'puck_radius' : 0.038,
+            'puck_radius' : 0.032,
             
-            'striker_radius' : 0.07,
+            'striker_radius' : 0.05,
             'striker_bounce' : 0.7,
         }
         
     def get_observations(self):
         """
-        observation : [pp, pv, s1p, s1v, s2p, s2v]
+        observation : [pp, pv, s1p, s2p]
         :return: striker1 observation, striker2 observation
         """
         p_p = self.state['puck']['position']
@@ -60,8 +60,8 @@ class HockeyPhysics:
         s1_v = self.state['striker1']['velocity']
         s2_p = self.state['striker2']['position']
         s2_v = self.state['striker2']['velocity']
-        o1 = np.array([p_p,p_v,s1_p,s1_v,s2_p,s2_v]).flatten()
-        o2 = -np.array([p_p,p_v,s2_p,s2_v,s1_p,s1_v]).flatten()
+        o1 = np.array([p_p,p_v,s1_p,s2_p]).flatten()
+        o2 = -np.array([p_p,p_v,s2_p,s1_p]).flatten()
         return o1, o2
     
     def is_goal(self):
@@ -104,16 +104,16 @@ class HockeyPhysics:
                 self.striker_collision('striker2')
                 collisions.append('striker2')
                 
-            if len(collisions)>10000:
-                print('Bounce loop')
-                return collisions
+            if len(collisions)>20000:
+                #print('Bounce loop')
+                return collisions, True
             if len(collisions)>2 and (collisions[-1]==collisions[-2]) and (collisions[-1][0]=='s'):
-                print('Double striker bounce')
-                return collisions
+                #print('Double striker bounce')
+                return collisions, True
                 
             # update time remaining in simulation step
             time -= min_time
-        return collisions
+        return collisions, False
     
     def update_positions(self, t):
         """
@@ -160,11 +160,6 @@ class HockeyPhysics:
         
         if a==0:
             return None
-        """
-        if a>1e25 or b>1e25 or c>1e25:
-            print('Weird shit: ',pos,vel)
-            return None
-        """
         
         discrim = b**2-4*a*c
             
@@ -289,6 +284,7 @@ class HockeyPhysics:
         p0 = self.state['puck']['position']
         
         # side bumpers
+        n = np.array([0,0])
         if abs(p0[0]-(table_w/2-r))<1e-5:
             n = np.array([-1,0])
         elif abs(p0[0]+(table_w/2-r))<1e-5:
@@ -374,13 +370,20 @@ class HockeyPhysics:
 class AirHockey(HockeyPhysics):
     """
     OpenAI gym style air hockey env to simulate playing from both sides of the table
+    
+    Reward Shaping:
+    +/- 1 awarded for goal
+    +/- 0.001 awarded for the puck being in your opponents half, to incentivise fast play
+    -   0.01 for getting too close to the robots limits, because it can be harmful to the motors
+    -   0.5 for bounce loop caused by jamming the puck into the corner
     """
-    def __init__(self, action_space, freq=0.2, max_length=60):
+    def __init__(self, action_space, freq=0.2, max_length=80):
         HockeyPhysics.__init__(self)
         self.action_space = action_space
         self.freq = freq
         self.max_length = max_length
-        self.side_penalty = 0
+        self.side_penalty = 0.001
+        self.wall_penalty = 0.01
         self.reset()
     
     def reset(self):
@@ -420,18 +423,37 @@ class AirHockey(HockeyPhysics):
         v = -self.action_space.execute(s2_action, v0, p)
         self.state['striker2']['velocity'] = v
         
+        # side peanalty
         side = np.sign(self.state['puck']['position'][1])
         sp = self.side_penalty
         
+        # wall peanalty
+        p = self.state['striker1']['position']
+        if abs(p[0])<0.45 and 0.3<abs(p[1])<.95:
+            wp1 = 0
+        else:
+            wp1 = self.wall_penalty
+            
+        p = self.state['striker2']['position']
+        if abs(p[0])<0.43 and 0.3<abs(p[1])<.95:
+            wp2 = 0
+        else:
+            wp2 = self.wall_penalty
+        
         self.time += self.freq
-        self.simulate(self.freq)
+        _, bounce_loop = self.simulate(self.freq)
         
         o1, o2 = self.get_observations()
-        r = float(self.is_goal() + side*sp)
+        r1 = float(self.is_goal() + side*sp) - wp1
+        r2 = -float(self.is_goal() + side*sp) - wp2
         d = self.is_goal() or (self.time>self.max_length)
         i = (self.time>self.max_length) and self.is_goal()==0
         
-        return o1, r, o2, -r, d, i
+        if bounce_loop:
+            r1 = float(0.25*side)-0.25
+            r2 = -float(0.25*side)-0.25           
+        
+        return o1, r1, o2, r2, d, i
     
 class SinglePlayerReturn(HockeyPhysics):
     """

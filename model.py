@@ -5,7 +5,7 @@ from torch.distributions import Categorical
 import numpy as np
 
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim=12, action_dim=3):
+    def __init__(self, state_dim=8, action_dim=3):
         super(ActorCritic, self).__init__()
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, 64)

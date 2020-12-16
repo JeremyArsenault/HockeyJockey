@@ -15,9 +15,9 @@ class Camera:
         self.rescaled_dim = (150, 270)
         
         # IMPORTANT COLOR CODES:
-        self.color_green = np.array([119,134,98]) 
+        self.color_green = np.array([97,130,90]) 
         self.color_pink = np.array([140,40,150])
-        self.color_orange = np.array([68,87,163])
+        self.color_orange = np.array([9,66,149])
         
         # connect to camera
         self.cam = cv2.VideoCapture(device)
@@ -26,6 +26,9 @@ class Camera:
             
         # set corners
         self.set_corners()
+        
+    def __del__(self):
+        self.cam.release()
         
     def get_image(self):
         """
@@ -134,19 +137,20 @@ class Camera:
         convert location of centroid into absolute position in meters
         :return: position
         """
-        pos_y = (self.table_length/self.rescaled_dim[1])*(loc[0]-self.rescaled_dim[1]/2)
-        pos_x = (self.table_width/self.rescaled_dim[0])*(loc[1]-self.rescaled_dim[0]/2)
+        pos_y = -(self.table_length/self.rescaled_dim[1])*(loc[1]-self.rescaled_dim[1]/2)
+        pos_x = (self.table_width/self.rescaled_dim[0])*(loc[0]-self.rescaled_dim[0]/2)
         return [pos_x, pos_y]
     
     def get_pos(self, frame):
         """
         find position state vector or everything on table
+        pos (x,y)
         :return: [puck pos, s1 pos, s2 pos]
         """
         frame = self.perspective_shift(frame)
         
-        puck_mask = self.color_mask(frame, self.color_green, thresh=15)
-        striker_mask = self.color_mask(frame, self.color_orange)
+        puck_mask = self.color_mask(frame, self.color_green, thresh=13)
+        striker_mask = self.color_mask(frame, self.color_orange, thresh=25, blur = 5)
         
         puck_loc = self.find_centroids(puck_mask)
         striker_locs = self.find_centroids(striker_mask, 2)
@@ -178,8 +182,8 @@ class Camera:
         
         return np.array([
                 p2[0], (p2[0]-p1[0])/elapsed,
-                p2[1], (p2[1]-p1[1])/elapsed,
-                p2[2], (p2[2]-p1[2])/elapsed,
+                p2[1],
+                p2[2],
                 ])
         
         

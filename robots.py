@@ -1,6 +1,5 @@
 import numpy as np
-#import RPi.GPIO as GPIO
-import time
+from ctypes import cdll
 
 class DiscreteActionBotSim:
     """
@@ -36,58 +35,30 @@ class DiscreteActionBot:
         self.pulse_left = 0.075
         self.pulse_right = 0.09
         
-        # label pins
-        self.pins = {'x_up':11, 'x_down':12,
-                     'y1_up':16, 'y1_down':15,
-                     'y2_up':32, 'y2_down':31,
-                     }
-        # pin setup
-        GPIO.setmode(GPIO.BOARD)
-        for pin in self.pins.values():
-            GPIO.setup(pin, GPIO.OUT)
-            GPIO.output(pin,GPIO.HIGH)            
+        # see motor_control.c for shared compilation instructions
+        self.mc_lib = cdll.LoadLibrary('./motor_control.so')
+        self.mc_lib.pinSetup()
         
+    def __del__(self):
+        self.mc_lib.pinSetup()
             
     def execute(self, action):
         """
-        execute action. blocks until action complete
+        execute move action. Does not block :)
         """
-        x_sleep = 0
-        y_sleep = 0
-        start_time = time.time()
-        
         if action[0]==0:
             # move up
-            GPIO.output(self.pins['y1_up'],GPIO.LOW)
-            GPIO.output(self.pins['y2_up'],GPIO.LOW)
-            y_sleep = self.pulse_up
+            self.mc_lib.moveUp(int(self.pulse_up*1000))
 
         elif action[0]==2:
             # move down
-            GPIO.output(self.pins['y1_down'],GPIO.LOW)
-            GPIO.output(self.pins['y2_down'],GPIO.LOW)
-            y_sleep = self.pulse_down
+            self.mc_lib.moveDown(int(self.pulse_down*1000))
 
         if action[1]==0:
             # move left
-            GPIO.output(self.pins['x_down'],GPIO.LOW)
-            x_sleep = self.pulse_left
+            self.mc_lib.moveLeft(int(self.pulse_left*1000))
         
         elif action[1]==2:
             # move right
-            GPIO.output(self.pins['x_up'],GPIO.LOW)
-            x_sleep = self.pulse_right
-        
-        # kill x
-        time.sleep(x_sleep)
-        GPIO.output(self.pins['x_up'],GPIO.HIGH)
-        GPIO.output(self.pins['x_down'],GPIO.HIGH)
-        
-        # kill y
-        time.sleep(max(0,y_sleep-x_sleep))
-        GPIO.output(self.pins['y1_up'],GPIO.HIGH)
-        GPIO.output(self.pins['y2_up'],GPIO.HIGH)
-        GPIO.output(self.pins['y1_down'],GPIO.HIGH)
-        GPIO.output(self.pins['y2_down'],GPIO.HIGH)
-        
+            self.mc_lib.moveRight(int(self.pulse_right*1000))
             

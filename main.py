@@ -13,8 +13,14 @@ if __name__=="__main__":
     model = torch.load(MODEL_PATH)
     
     while True:
+        t = time.time()
+        
         state = env.get_state()
         action = model(state)
         env.step(action)
+        
+        elapsed = time.time()-t
+        if elapsed < FREQUENCY:
+            time.sleep(FREQUENCY - elapsed)
     
     

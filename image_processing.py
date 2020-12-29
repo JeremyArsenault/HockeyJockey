@@ -15,9 +15,9 @@ class Camera:
         self.rescaled_dim = (150, 270)
         
         # IMPORTANT COLOR CODES:
-        self.color_green = np.array([97,130,90]) 
-        self.color_pink = np.array([140,40,150])
-        self.color_orange = np.array([9,66,149])
+        self.color_green = np.array([[70,75,90],[90,95,180]]) 
+        self.color_pink = np.array([[145,140,40],[165,180,190]]) 
+        self.color_orange = np.array([[0,140,40],[10,190,190]]) 
         
         # connect to camera
         self.cam = cv2.VideoCapture(device)
@@ -25,6 +25,9 @@ class Camera:
             raise Exception('Failed to connect to webcam')
             
         # set corners
+        for i in range(5):
+            time.sleep(1) # <- WTF (let camera auto white balance / expose?)
+            self.flush_buffer()
         self.set_corners()
         
     def __del__(self):
@@ -38,6 +41,7 @@ class Camera:
         self.flush_buffer()
         _, frame = self.cam.read()
         shift_frame = self.perspective_shift(frame)
+        #shift_frame = None
         return frame, shift_frame
     
     def flush_buffer(self):
@@ -53,15 +57,16 @@ class Camera:
             t1 = t2
             self.cam.read()
         
-    def color_mask(self, img, color, thresh=20, blur=3):
+    def color_mask(self, img, color, thresh=50, blur=5):
         """
         Mask image according to color
         :return: mask (0:other colors, 1:selected color)
         """
-        dist = np.linalg.norm(img-color, axis=2)
-        mask = dist <= (np.min(dist) + thresh)
-        smooth_mask = cv2.blur(np.uint8(mask), (blur,blur))
-        return np.float32(smooth_mask)
+        # converting from BGR to HSV color space
+        hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv,color[0],color[1])
+        smooth_mask = cv2.blur(np.float32(mask), (blur,blur))>thresh
+        return np.uint(smooth_mask)*100
     
     def perspective_shift(self, img):
         """
@@ -120,10 +125,11 @@ class Camera:
         """
         self.flush_buffer()
         _, frame = self.cam.read()
-        corner_mask = self.color_mask(frame, self.color_pink, thresh=30, blur=5)
+        corner_mask = self.color_mask(frame, self.color_pink, blur=8)
         pts, detected = self.find_centroids(corner_mask, 4)
         if not detected:
-            raise Exception("Failed to detect all four table corners")
+            pass
+            #raise Exception("Failed to detect all four table corners")
             
         # put pts in correct order
         corners = np.zeros((4, 2))
@@ -155,8 +161,8 @@ class Camera:
         """
         frame = self.perspective_shift(frame)
         
-        puck_mask = self.color_mask(frame, self.color_green, thresh=13)
-        striker_mask = self.color_mask(frame, self.color_orange, thresh=25, blur = 5)
+        puck_mask = self.color_mask(frame, self.color_green, thresh=15)
+        striker_mask = self.color_mask(frame, self.color_orange, thresh=25, blur=5)
         
         puck_loc, _ = self.find_centroids(puck_mask)
         striker_locs, _ = self.find_centroids(striker_mask, 2)
@@ -166,13 +172,14 @@ class Camera:
         if striker_locs[0] is not None:
             pos_1 = self.abs_to_meter(striker_locs[0])
             pos_2 = self.abs_to_meter(striker_locs[1])
-            s1_pos, s2_pos = pos_1, pos_2 if pos_1[1]<0 else pos_2, pos_1
+            s1_pos = pos_1 if pos_1[1]<0 else pos_2
+            s2_pos = pos_2 if pos_1[1]<0 else pos_1
         else:
             s1_pos, s2_pos = None, None          
         
         return [p_pos, s1_pos, s2_pos]
         
-    def get_state(self, time, frames=4):
+    def get_state(self, frames=3):
         """
         Capture frame and find state vector of everything on the table.
         :frames: number of frames captured to determine velocity
@@ -187,7 +194,7 @@ class Camera:
         # time this to make sure we aren't blocking on get_pos for too long
         puck_history = []
         time_history = []
-        p_pos, p_vel = [0,0], [0,0]
+        p_pos, p_vel, p_pos_test = [0,0], [0,0], [0,0]
         s1_pos, s2_pos = [0,0], [0,0]
         for i in range(frames):
             _, frame = self.cam.read()
@@ -198,20 +205,24 @@ class Camera:
                 puck_history.append(p[0])
                 time_history.append(t)
             # choose last nonzero striker locations
+            if p[0] is not None:
+                p_pos_test = p[0]
             if p[1] is not None:
                 s1_pos = p[1]
             if p[2] is not None:
                 s2_pos = p[2]
             
         # estimate puck position at current time
-        if len(puck_history)==1:
+        if len(puck_history)==0:
+            pass
+        elif len(puck_history)==1:
             p_pos = puck_history[0]
         else:
             # do linear regression
             a = np.array([[t,1] for t in time_history])
             b = np.array(puck_history)
             m = np.linalg.lstsq(a, b, rcond=None)[0]
-            
+                
             t = np.array([[time.time()-start_t, 1]])
             p_pos = np.dot(t,m)[0]
             p_vel = m[:,0]

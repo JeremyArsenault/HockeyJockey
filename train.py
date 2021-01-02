@@ -3,8 +3,6 @@ import torch
 import torch.optim as optim
 from simulation_env import AirHockey, SinglePlayerReturn
 from robots import DiscreteActionBotSim
-import copy
-import gym
 import numpy as np
 
 def train_single_player_return():
@@ -78,10 +76,10 @@ def train():
     
     env = AirHockey(DiscreteActionBotSim())
     
-    policy = ActorCritic()
-    old_policy = ActorCritic()
-    #policy = torch.load('models/actor_critic.pkl')
-    #old_policy = torch.load('models/actor_critic.pkl')
+    #policy = ActorCritic()
+    #old_policy = ActorCritic()
+    policy = torch.load('models/actor_critic.pkl')
+    old_policy = torch.load('models/actor_critic.pkl')
     old_policy.eval()
     
     optimizer = optim.Adam(policy.parameters(), lr=lr, betas=betas)

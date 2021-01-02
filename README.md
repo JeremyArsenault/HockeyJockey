@@ -16,7 +16,7 @@ A personal project with the goal of achieving human level Air Hockey proficency 
 ********
 ### Files:
 
-**env.py :** Model of environment used for model + robot
+**main.py :** Main loop for running the robot
 
 **robots.py :** Classes for interacting with and simulating interactions with the Airhockey robot
 
@@ -29,3 +29,5 @@ A personal project with the goal of achieving human level Air Hockey proficency 
 **model.py :** Actor-Critic model (pytorch)
 
 **test.py :** Simulate and render games to observe
+
+**motor_control.c :** Functions to interact with GPIO/motors (POSIX Threads)

@@ -13,17 +13,17 @@ if __name__=="__main__":
     
     model = torch.load(MODEL_PATH)
     
-    #while True:
-    for i in range(5):
+    while True:
+    #for i in range(5):
         t = time.time()
         
         state = camera.get_state()
-        #action = model(state)
-        action = ([0,1])
+        action = model(state)
+        #action = ([0,1])
         agent.execute(action)
         
         elapsed = time.time()-t
-        print(elapsed)
+        #print(elapsed)
         if elapsed < FREQUENCY:
             time.sleep(FREQUENCY - elapsed)
     
